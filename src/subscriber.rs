@@ -1,4 +1,9 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, sync::Arc};
+
+use log::error;
+use rosc::{encoder, OscMessage, OscType};
+
+use crate::{color::Color, osc::OscSender};
 
 /// Maintain the collection of palette subscribers.
 pub struct Subscribers {
@@ -26,6 +31,37 @@ impl Subscribers {
             ControlMessage::Remove(id) => {
                 self.subs.retain(|sub| sub.id != id);
                 emitter.emit_subscriber_state_change(StateChange::Removed(id));
+            }
+        }
+    }
+
+    /// Send the provided palette to all subscribers.
+    /// Logs errors.
+    pub fn send_palette(&self, colors: &[Color], osc_sender: &OscSender) {
+        use SubscriberConfig::*;
+        // Produce encoded messages only once.
+        let mut osc_args = Vec::with_capacity(colors.len() * 3);
+        for color in colors {
+            osc_args.push(OscType::Float(color.red));
+            osc_args.push(OscType::Float(color.green));
+            osc_args.push(OscType::Float(color.blue));
+        }
+        let osc_msg = OscMessage {
+            addr: "/palette".to_string(),
+            args: osc_args,
+        };
+        let osc_encoded = Arc::new(match encoder::encode(&rosc::OscPacket::Message(osc_msg)) {
+            Ok(msg) => msg,
+            Err(e) => {
+                error!("Unable to encode OSC message: {}.", e);
+                return;
+            }
+        });
+        for sub in self.subs.iter() {
+            match sub.cfg {
+                Osc(addr) => {
+                    osc_sender.send(addr, osc_encoded.clone());
+                }
             }
         }
     }

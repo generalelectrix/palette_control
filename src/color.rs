@@ -1,6 +1,6 @@
 #[derive(Debug, Clone, Copy)]
 pub struct Color {
-    red: f64,
-    green: f64,
-    blue: f64,
+    pub red: f32,
+    pub green: f32,
+    pub blue: f32,
 }
