@@ -1,4 +1,4 @@
-use crate::{color::Color, osc::OscSender};
+use crate::color::Color;
 
 pub struct Palette(Vec<Color>);
 
@@ -7,12 +7,16 @@ impl Palette {
         Self(Vec::new())
     }
 
-    pub fn control<E: EmitStateChange>(&mut self, msg: ControlMessage, emitter: &mut E) {
+    pub fn colors(&self) -> &[Color] {
+        &self.0
+    }
+
+    pub fn control(&mut self, msg: ControlMessage) -> StateChange {
         match msg {
             ControlMessage::Set(colors) => {
                 self.0.clear();
                 self.0.extend_from_slice(&colors);
-                emitter.emit_palette_state_change(StateChange::Set(colors));
+                StateChange::Set(colors)
             }
         }
     }
@@ -24,8 +28,4 @@ pub enum ControlMessage {
 
 pub enum StateChange {
     Set(Vec<Color>),
-}
-
-pub trait EmitStateChange {
-    fn emit_palette_state_change(&mut self, sc: StateChange);
 }
