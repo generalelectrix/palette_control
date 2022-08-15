@@ -2,7 +2,7 @@ use log::{error, info, warn};
 use simple_error::bail;
 use std::error::Error;
 use std::net::TcpStream;
-use std::sync::mpsc::{SendError, Sender};
+use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use websocket::server::upgrade::WsUpgrade;
@@ -51,6 +51,19 @@ impl Manager {
         });
         Ok(manager)
     }
+
+    pub fn send_state_update(&self, msg: &StateChange) -> Result<(), Box<dyn Error>> {
+        let serialized = OwnedMessage::Text(serde_json::to_string(&msg)?);
+        for sender in self.senders.lock().unwrap().iter_mut() {
+            if let Err(e) = sender.send_message(&serialized) {
+                // FIXME: how do we know when a client has hung up?
+                // Need to identify this condition and boot the sender from the
+                // collection.
+                error!("Websocket send error: {}.", e);
+            }
+        }
+        Ok(())
+    }
 }
 
 fn handle_upgrade_request(
@@ -72,6 +85,7 @@ fn handle_upgrade_request(
 /// Handle incoming messages from a websocket reader, deserialize, and forward.
 fn handle_messages(mut reader: Reader<TcpStream>, send: Sender<ControlMessage>) {
     for message_result in reader.incoming_messages() {
+        // FIXME: will this terminate if the socket is closed?
         let message = match message_result {
             Ok(m) => m,
             Err(e) => {
