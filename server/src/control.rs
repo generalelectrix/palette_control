@@ -1,61 +1,53 @@
+use log::error;
 use serde::{Deserialize, Serialize};
+use shared::{ControlMessage, PaletteStateChange, StateChange, SubscriberStateChange};
 
+use crate::client::Clients;
 use crate::osc::OscSender;
-use crate::palette::{
-    ControlMessage as PaletteControlMessage, Palette, StateChange as PaletteStateChange,
-};
-use crate::subscriber::{
-    ControlMessage as SubscriberControlMessage, StateChange as SubscriberStateChange, Subscribers,
-};
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ControlMessage {
-    Palette(PaletteControlMessage),
-    Subscriber(SubscriberControlMessage),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum StateChange {
-    Palette(PaletteStateChange),
-    Subscriber(SubscriberStateChange),
-}
+use crate::palette::Palette;
+use crate::subscriber::Subscribers;
 
 pub struct Dispatcher {
     osc_sender: OscSender,
     palette: Palette,
     subs: Subscribers,
+    clients: Clients,
 }
 
 impl Dispatcher {
-    pub fn new(osc_sender: OscSender, palette: Palette) -> Self {
+    pub fn new(osc_sender: OscSender, palette: Palette, clients: Clients) -> Self {
         Self {
             osc_sender,
             palette,
             subs: Subscribers::new(),
+            clients,
         }
     }
 
     pub fn control(&mut self, msg: ControlMessage) {
         use ControlMessage::*;
-        match msg {
+        let state_change = match msg {
             Palette(m) => {
-                match self.palette.control(m) {
-                    PaletteStateChange::Set(colors) => {
-                        self.subs.send_palette(&colors, &self.osc_sender);
-                        // TODO: send palette update to all controllers
-                    }
+                let control_result = self.palette.control(m);
+                if let PaletteStateChange::Set(ref colors) = control_result {
+                    self.subs.send_palette(&colors, &self.osc_sender);
                 }
+                StateChange::Palette(control_result)
             }
-            Subscriber(m) => match self.subs.control(m) {
-                SubscriberStateChange::Added(sub) => {
+            Subscriber(m) => {
+                let control_result = self.subs.control(m);
+                if let SubscriberStateChange::Added(ref sub) = control_result {
                     self.subs
-                        .send_palette_to(sub.id(), self.palette.colors(), &self.osc_sender);
-                    // TODO: send added subscriber to controllers
+                        .send_palette_to(sub.id, self.palette.colors(), &self.osc_sender);
                 }
-                SubscriberStateChange::Removed(_) => {
-                    // TODO: send state change to controllers
-                }
-            },
+                StateChange::Subscriber(control_result)
+            }
+        };
+        if let Err(e) = self.clients.send_state_update(&state_change) {
+            error!(
+                "Failed to send state update to clients: {}.\nMissed update:\n{:?}",
+                e, state_change
+            );
         }
     }
 }

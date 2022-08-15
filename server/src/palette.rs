@@ -1,6 +1,4 @@
-use serde::{Deserialize, Serialize};
-
-use crate::color::Color;
+use shared::{Color, PaletteControlMessage, PaletteStateChange};
 
 pub struct Palette(Vec<Color>);
 
@@ -13,23 +11,13 @@ impl Palette {
         &self.0
     }
 
-    pub fn control(&mut self, msg: ControlMessage) -> StateChange {
+    pub fn control(&mut self, msg: PaletteControlMessage) -> PaletteStateChange {
         match msg {
-            ControlMessage::Set(colors) => {
+            PaletteControlMessage::Set(colors) => {
                 self.0.clear();
                 self.0.extend_from_slice(&colors);
-                StateChange::Set(colors)
+                PaletteStateChange::Set(colors)
             }
         }
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ControlMessage {
-    Set(Vec<Color>),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum StateChange {
-    Set(Vec<Color>),
 }

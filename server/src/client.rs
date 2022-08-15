@@ -1,4 +1,5 @@
 use log::{error, info, warn};
+use shared::{ControlMessage, StateChange};
 use simple_error::bail;
 use std::error::Error;
 use std::net::TcpStream;
@@ -10,16 +11,14 @@ use websocket::sync::server::upgrade::Buffer;
 use websocket::sync::{Reader, Server, Writer};
 use websocket::OwnedMessage;
 
-use crate::control::{ControlMessage, StateChange};
-
 type Senders = Arc<Mutex<Vec<Writer<TcpStream>>>>;
 
 /// Handle client communication via websockets.
-pub struct Manager {
+pub struct Clients {
     senders: Senders,
 }
 
-impl Manager {
+impl Clients {
     pub fn new(send: Sender<ControlMessage>) -> Result<Self, Box<dyn Error>> {
         let senders = Arc::new(Mutex::new(Vec::new()));
         let manager = Self {

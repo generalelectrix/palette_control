@@ -1,5 +1,7 @@
 use yew::prelude::*;
 
+mod websocket;
+
 enum Msg {
     AddOne,
 }

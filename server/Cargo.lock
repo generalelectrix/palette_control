@@ -563,6 +563,7 @@ dependencies = [
  "rosc",
  "serde",
  "serde_json",
+ "shared",
  "simple-error",
  "websocket",
 ]
@@ -903,6 +904,15 @@ dependencies = [
  "digest",
  "fake-simd",
  "opaque-debug",
+]
+
+[[package]]
+name = "shared"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

@@ -1,11 +1,13 @@
 use std::error::Error;
-use std::{net::SocketAddr, sync::Arc};
+use std::sync::Arc;
 
-use crate::{color::Color, osc::OscSender};
-use derive_more::Display;
+use crate::osc::OscSender;
 use log::error;
 use rosc::{encoder, OscMessage, OscType};
-use serde::{Deserialize, Serialize};
+use shared::{
+    Color, Subscriber, SubscriberConfig, SubscriberControlMessage, SubscriberId,
+    SubscriberStateChange,
+};
 
 /// Maintain the collection of palette subscribers.
 pub struct Subscribers {
@@ -17,22 +19,22 @@ impl Subscribers {
     pub fn new() -> Self {
         Self {
             subs: Vec::new(),
-            next_id: SubscriberId(0),
+            next_id: SubscriberId::ZERO,
         }
     }
 
-    pub fn control(&mut self, msg: ControlMessage) -> StateChange {
+    pub fn control(&mut self, msg: SubscriberControlMessage) -> SubscriberStateChange {
         match msg {
-            ControlMessage::Add(cfg) => {
+            SubscriberControlMessage::Add(cfg) => {
                 let id = self.next_id;
-                self.next_id.0 += 1;
+                self.next_id.advance();
                 let sub = Subscriber { id, cfg };
                 self.subs.push(sub.clone());
-                StateChange::Added(sub)
+                SubscriberStateChange::Added(sub)
             }
-            ControlMessage::Remove(id) => {
+            SubscriberControlMessage::Remove(id) => {
                 self.subs.retain(|sub| sub.id != id);
-                StateChange::Removed(id)
+                SubscriberStateChange::Removed(id)
             }
         }
     }
@@ -94,38 +96,4 @@ fn prepare_osc_palette(colors: &[Color]) -> Result<Arc<Vec<u8>>, Box<dyn Error>>
     Ok(Arc::new(encoder::encode(&rosc::OscPacket::Message(
         osc_msg,
     ))?))
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ControlMessage {
-    Add(SubscriberConfig),
-    Remove(SubscriberId),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum StateChange {
-    Added(Subscriber),
-    Removed(SubscriberId),
-}
-
-/// A unique ID assigned to each subscriber when it is added.
-/// Clients can refer to subscribers by this ID.
-#[derive(Debug, Copy, Clone, PartialEq, Display, Serialize, Deserialize)]
-pub struct SubscriberId(u64);
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Subscriber {
-    id: SubscriberId,
-    cfg: SubscriberConfig,
-}
-
-impl Subscriber {
-    pub fn id(&self) -> SubscriberId {
-        self.id
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum SubscriberConfig {
-    Osc(SocketAddr),
 }
