@@ -1,4 +1,4 @@
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener};
 use std::{error::Error, sync::mpsc::channel, thread, time::Duration};
 
 use color::Color;
@@ -9,6 +9,10 @@ use palette::Palette;
 use simple_error::bail;
 use subscriber::{ControlMessage as SubscriberControlMessage, SubscriberConfig};
 
+use websocket::sync::Server;
+use websocket::OwnedMessage;
+
+mod client;
 mod color;
 mod control;
 mod osc;
@@ -16,6 +20,8 @@ mod palette;
 mod subscriber;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    let server = Server::bind("127.0.0.1:2794").unwrap();
+
     let (send, recv) = channel();
 
     let dest_addr = SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 11000);

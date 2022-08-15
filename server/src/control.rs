@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::osc::OscSender;
 use crate::palette::{
     ControlMessage as PaletteControlMessage, Palette, StateChange as PaletteStateChange,
@@ -6,11 +8,13 @@ use crate::subscriber::{
     ControlMessage as SubscriberControlMessage, StateChange as SubscriberStateChange, Subscribers,
 };
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ControlMessage {
     Palette(PaletteControlMessage),
     Subscriber(SubscriberControlMessage),
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum StateChange {
     Palette(PaletteStateChange),
     Subscriber(SubscriberStateChange),

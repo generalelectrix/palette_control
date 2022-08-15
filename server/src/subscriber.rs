@@ -5,6 +5,7 @@ use crate::{color::Color, osc::OscSender};
 use derive_more::Display;
 use log::error;
 use rosc::{encoder, OscMessage, OscType};
+use serde::{Deserialize, Serialize};
 
 /// Maintain the collection of palette subscribers.
 pub struct Subscribers {
@@ -95,11 +96,13 @@ fn prepare_osc_palette(colors: &[Color]) -> Result<Arc<Vec<u8>>, Box<dyn Error>>
     ))?))
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ControlMessage {
     Add(SubscriberConfig),
     Remove(SubscriberId),
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum StateChange {
     Added(Subscriber),
     Removed(SubscriberId),
@@ -107,10 +110,10 @@ pub enum StateChange {
 
 /// A unique ID assigned to each subscriber when it is added.
 /// Clients can refer to subscribers by this ID.
-#[derive(Debug, Copy, Clone, PartialEq, Display)]
+#[derive(Debug, Copy, Clone, PartialEq, Display, Serialize, Deserialize)]
 pub struct SubscriberId(u64);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Subscriber {
     id: SubscriberId,
     cfg: SubscriberConfig,
@@ -122,7 +125,7 @@ impl Subscriber {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SubscriberConfig {
     Osc(SocketAddr),
 }
