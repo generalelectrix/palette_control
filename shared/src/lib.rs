@@ -12,6 +12,7 @@ pub struct Color {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ControlMessage {
+    Refresh,
     Palette(PaletteControlMessage),
     Subscriber(SubscriberControlMessage),
 }
@@ -46,7 +47,7 @@ pub enum SubscriberStateChange {
 
 /// A unique ID assigned to each subscriber when it is added.
 /// Clients can refer to subscribers by this ID.
-#[derive(Debug, Copy, Clone, PartialEq, Display, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Display, Serialize, Deserialize)]
 pub struct SubscriberId(u64);
 
 impl SubscriberId {

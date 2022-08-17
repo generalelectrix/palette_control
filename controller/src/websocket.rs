@@ -1,10 +1,14 @@
 use futures::{channel::mpsc::Sender, SinkExt, StreamExt};
 use reqwasm::websocket::{futures::WebSocket, Message};
 
+use shared::ControlMessage;
 use wasm_bindgen_futures::spawn_local;
+use yew_agent::Dispatched;
+
+use crate::event_bus::EventBus;
 
 pub struct WebsocketService {
-    pub tx: Sender<String>,
+    pub tx: Sender<ControlMessage>,
 }
 
 impl WebsocketService {
@@ -13,33 +17,44 @@ impl WebsocketService {
 
         let (mut write, mut read) = ws.split();
 
-        let (in_tx, mut in_rx) = futures::channel::mpsc::channel::<String>(1000);
+        let (in_tx, mut in_rx) = futures::channel::mpsc::channel::<ControlMessage>(1000);
+        let mut event_bus = EventBus::dispatcher();
 
         spawn_local(async move {
-            while let Some(s) = in_rx.next().await {
-                log::debug!("got event from channel! {}", s);
+            while let Some(msg) = in_rx.next().await {
+                log::debug!("got event from channel! {:?}", msg);
+                let s = serde_json::to_string(&msg).unwrap();
                 write.send(Message::Text(s)).await.unwrap();
             }
         });
 
         spawn_local(async move {
             while let Some(msg) = read.next().await {
-                match msg {
-                    Ok(Message::Text(data)) => {
-                        log::debug!("from websocket: {}", data);
-                    }
-                    Ok(Message::Bytes(b)) => {
-                        let decoded = std::str::from_utf8(&b);
-                        if let Ok(val) = decoded {
-                            log::debug!("from websocket: {}", val);
+                let msg_contents = match msg {
+                    Ok(Message::Text(data)) => data,
+                    Ok(Message::Bytes(b)) => match String::from_utf8(b) {
+                        Ok(val) => val,
+                        Err(e) => {
+                            log::error!("ws: {:?}", e);
+                            continue;
                         }
+                    },
+                    Err(e) => {
+                        log::error!("ws: {:?}", e);
+                        continue;
+                    }
+                };
+                match serde_json::from_str(&msg_contents) {
+                    Ok(msg) => {
+                        event_bus.send(msg);
                     }
                     Err(e) => {
-                        log::error!("ws: {:?}", e)
+                        log::error!("ws: {:?}", e);
+                        continue;
                     }
                 }
+                log::debug!("WebSocket Closed");
             }
-            log::debug!("WebSocket Closed");
         });
 
         Self { tx: in_tx }

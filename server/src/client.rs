@@ -25,7 +25,7 @@ impl Clients {
             senders: senders.clone(),
         };
         // Create the websocket server and launch a thread to handle connections.
-        let server = Server::bind("127.0.0.1:2794")?;
+        let server = Server::bind("127.0.0.1:8080")?;
 
         thread::spawn(move || {
             for req in server.filter_map(Result::ok) {

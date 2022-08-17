@@ -39,6 +39,12 @@ impl Subscribers {
         }
     }
 
+    pub fn current_state(&'a self) -> impl Iterator<Item = SubscriberStateChange, 'a> {
+        self.subs
+            .iter()
+            .map(|sub| SubscriberStateChange::Added(sub.clone()))
+    }
+
     /// Send the provided palette to all subscribers.
     /// Logs errors.
     pub fn send_palette(&self, colors: &[Color], osc_sender: &OscSender) {

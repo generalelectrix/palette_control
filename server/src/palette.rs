@@ -20,4 +20,8 @@ impl Palette {
             }
         }
     }
+
+    pub fn current_state(&self) -> PaletteStateChange {
+        PaletteStateChange::Set(self.0.clone())
+    }
 }

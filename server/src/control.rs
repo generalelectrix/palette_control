@@ -1,5 +1,4 @@
 use log::error;
-use serde::{Deserialize, Serialize};
 use shared::{ControlMessage, PaletteStateChange, StateChange, SubscriberStateChange};
 
 use crate::client::Clients;
@@ -26,13 +25,13 @@ impl Dispatcher {
 
     pub fn control(&mut self, msg: ControlMessage) {
         use ControlMessage::*;
-        let state_change = match msg {
+        match msg {
             Palette(m) => {
                 let control_result = self.palette.control(m);
                 if let PaletteStateChange::Set(ref colors) = control_result {
                     self.subs.send_palette(&colors, &self.osc_sender);
                 }
-                StateChange::Palette(control_result)
+                self.send_to_clients(StateChange::Palette(control_result))
             }
             Subscriber(m) => {
                 let control_result = self.subs.control(m);
@@ -40,13 +39,22 @@ impl Dispatcher {
                     self.subs
                         .send_palette_to(sub.id, self.palette.colors(), &self.osc_sender);
                 }
-                StateChange::Subscriber(control_result)
+                self.send_to_clients(StateChange::Subscriber(control_result))
+            }
+            Refresh => {
+                self.send_to_clients(StateChange::Palette(self.palette.current_state()));
+                for sc in self.subs.current_state() {
+                    self.send_to_clients(StateChange::Subscriber(sc));
+                }
             }
         };
-        if let Err(e) = self.clients.send_state_update(&state_change) {
+    }
+
+    fn send_to_clients(&self, sc: StateChange) {
+        if let Err(e) = self.clients.send_state_update(&sc) {
             error!(
                 "Failed to send state update to clients: {}.\nMissed update:\n{:?}",
-                e, state_change
+                e, sc
             );
         }
     }

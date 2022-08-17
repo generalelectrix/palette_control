@@ -17,3 +17,4 @@ wasm-bindgen-futures = "0.4.28"
 serde_json = "1.0.73"
 serde = {version = "1.0", features=["derive"]}
 shared = { path = "../shared" }
+yew-agent = "0.1.0"
