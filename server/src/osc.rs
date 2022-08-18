@@ -40,6 +40,6 @@ impl OscSender {
     }
 
     pub fn send(&self, addr: SocketAddr, packet: Arc<Vec<u8>>) {
-        self.send.send((addr, packet));
+        self.send.send((addr, packet)).unwrap();
     }
 }

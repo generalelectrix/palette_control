@@ -26,9 +26,7 @@ impl Component for App {
     fn create(ctx: &Context<Self>) -> Self {
         let mut wss = WebsocketService::new();
 
-        if let Ok(_) = wss.tx.try_send(shared::ControlMessage::Refresh) {
-            log::debug!("message sent successfully");
-        }
+        wss.tx.try_send(shared::ControlMessage::Refresh).unwrap();
 
         Self {
             palette: vec![],
@@ -61,6 +59,8 @@ impl Component for App {
     fn view(&self, ctx: &Context<Self>) -> Html {
         // let _ = ctx.link().callback(|_| Msg::SubmitMessage);
 
-        html! {}
+        html! {
+            <span>{"Hello, world."}</span>
+        }
     }
 }

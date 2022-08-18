@@ -15,6 +15,7 @@ mod palette;
 mod subscriber;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    simple_logger::SimpleLogger::new().init().unwrap();
     let (send, recv) = channel();
 
     let dest_addr = SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 11000);

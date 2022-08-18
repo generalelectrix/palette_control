@@ -1,6 +1,5 @@
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use shared::{ControlMessage, StateChange};
-use simple_error::bail;
 use std::error::Error;
 use std::net::TcpStream;
 use std::sync::mpsc::Sender;
@@ -25,10 +24,18 @@ impl Clients {
             senders: senders.clone(),
         };
         // Create the websocket server and launch a thread to handle connections.
-        let server = Server::bind("127.0.0.1:8080")?;
+        let server = Server::bind("127.0.0.1:8081")?;
 
         thread::spawn(move || {
-            for req in server.filter_map(Result::ok) {
+            for req in server
+                .map(|r| {
+                    if let Err(ref e) = r {
+                        error!("Websocket error: {:?}.", e);
+                    }
+                    r
+                })
+                .filter_map(Result::ok)
+            {
                 let (reader, writer) = match handle_upgrade_request(req) {
                     Ok(c) => c,
                     Err(e) => {
@@ -52,6 +59,7 @@ impl Clients {
     }
 
     pub fn send_state_update(&self, msg: &StateChange) -> Result<(), Box<dyn Error>> {
+        debug!("Sending state update to clients: {:?}", *msg);
         let serialized = OwnedMessage::Text(serde_json::to_string(&msg)?);
         for sender in self.senders.lock().unwrap().iter_mut() {
             if let Err(e) = sender.send_message(&serialized) {
@@ -68,15 +76,8 @@ impl Clients {
 fn handle_upgrade_request(
     request: WsUpgrade<TcpStream, Option<Buffer>>,
 ) -> Result<(Reader<TcpStream>, Writer<TcpStream>), Box<dyn Error>> {
-    if !request.protocols().contains(&"palette".to_string()) {
-        request.reject().map_err(|(_, e)| e)?;
-        bail!("Rejected websocket upgrade for incorrect protocol.")
-    }
-
-    let client = request
-        .use_protocol("palette")
-        .accept()
-        .map_err(|(_, e)| e)?;
+    info!("{:?}", request.protocols());
+    let client = request.accept().map_err(|(_, e)| e)?;
 
     Ok(client.split()?)
 }
@@ -93,6 +94,10 @@ fn handle_messages(mut reader: Reader<TcpStream>, send: Sender<ControlMessage>) 
             }
         };
         let contents = match message {
+            OwnedMessage::Close(_) => {
+                info!("Websocket close, terminating listener thread.");
+                return;
+            }
             OwnedMessage::Text(t) => t,
             other => {
                 warn!("Unhandled websocket message type: {:?}", other);
@@ -109,6 +114,7 @@ fn handle_messages(mut reader: Reader<TcpStream>, send: Sender<ControlMessage>) 
                 continue;
             }
         };
+        info!("Got control message: {:?}", control_msg);
         if send.send(control_msg).is_err() {
             info!("Terminating websocket receiver thread.");
             return;

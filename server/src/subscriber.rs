@@ -39,7 +39,7 @@ impl Subscribers {
         }
     }
 
-    pub fn current_state(&'a self) -> impl Iterator<Item = SubscriberStateChange, 'a> {
+    pub fn current_state<'a>(&'a self) -> impl Iterator<Item = SubscriberStateChange> + 'a {
         self.subs
             .iter()
             .map(|sub| SubscriberStateChange::Added(sub.clone()))
