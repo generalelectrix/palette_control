@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
+use crate::color::Palette;
 use shared::{
-    Color, PaletteStateChange, StateChange, SubscriberConfig, SubscriberId, SubscriberStateChange,
+    Color, ControlMessage, PaletteStateChange, StateChange, SubscriberConfig, SubscriberId,
+    SubscriberStateChange,
 };
 use yew::prelude::*;
 use yew_agent::{Bridge, Bridged};
@@ -11,6 +13,7 @@ use crate::websocket::WebsocketService;
 
 pub enum Msg {
     HandleStateChange(StateChange),
+    Send(ControlMessage),
 }
 
 pub struct App {
@@ -53,6 +56,10 @@ impl Component for App {
                 };
                 true
             }
+            Msg::Send(msg) => {
+                self.wss.tx.try_send(msg).unwrap();
+                false
+            }
         }
     }
 
@@ -60,7 +67,7 @@ impl Component for App {
         // let _ = ctx.link().callback(|_| Msg::SubmitMessage);
 
         html! {
-            <span>{"Hello, world."}</span>
+            <Palette colors={self.palette.clone()} />
         }
     }
 }

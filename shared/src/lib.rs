@@ -3,11 +3,28 @@ use std::net::SocketAddr;
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct Color {
     pub red: f32,
     pub green: f32,
     pub blue: f32,
+}
+
+impl Color {
+    pub fn as_u8(&self) -> (u8, u8, u8) {
+        (
+            unipolar_float_to_u8(self.red),
+            unipolar_float_to_u8(self.green),
+            unipolar_float_to_u8(self.blue),
+        )
+    }
+}
+
+/// Convert a unit float to an 8-bit integer.
+/// Uses rounding instead of floor to ensure we divide up the unit range into
+/// bins of equal size.
+fn unipolar_float_to_u8(f: f32) -> u8 {
+    (f * 255.).round() as u8
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

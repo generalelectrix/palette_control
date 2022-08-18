@@ -46,6 +46,7 @@ impl WebsocketService {
                 };
                 match serde_json::from_str(&msg_contents) {
                     Ok(msg) => {
+                        log::info!("Sending state change: {:?}", msg);
                         event_bus.send(msg);
                     }
                     Err(e) => {
@@ -53,8 +54,8 @@ impl WebsocketService {
                         continue;
                     }
                 }
-                log::debug!("WebSocket Closed");
             }
+            log::debug!("WebSocket Closed");
         });
 
         Self { tx: in_tx }

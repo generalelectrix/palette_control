@@ -1,11 +1,15 @@
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+use std::thread;
+use std::time::Duration;
 use std::{error::Error, sync::mpsc::channel};
 
 use client::Clients;
 use control::Dispatcher;
 use osc::OscSender;
 use palette::Palette;
-use shared::{ControlMessage, SubscriberConfig, SubscriberControlMessage};
+use shared::{
+    Color, ControlMessage, PaletteControlMessage, SubscriberConfig, SubscriberControlMessage,
+};
 use simple_error::bail;
 
 mod client;
@@ -24,9 +28,39 @@ fn main() -> Result<(), Box<dyn Error>> {
         SubscriberConfig::Osc(SocketAddr::V4(dest_addr)),
     )))?;
 
-    let clients = Clients::new(send)?;
+    let clients = Clients::new(send.clone())?;
 
     let mut dispatcher = Dispatcher::new(OscSender::new(10000)?, Palette::new(), clients);
+
+    // Test - periodically send a palette update.
+    thread::spawn(move || {
+        let mut colors = vec![
+            Color {
+                red: 1.,
+                green: 1.,
+                blue: 0.,
+            },
+            Color {
+                red: 1.,
+                green: 0.,
+                blue: 1.,
+            },
+            Color {
+                red: 0.,
+                green: 1.,
+                blue: 1.,
+            },
+        ];
+        loop {
+            if let Err(_) = send.send(ControlMessage::Palette(PaletteControlMessage::Set(
+                colors.clone(),
+            ))) {
+                break;
+            }
+            thread::sleep(Duration::from_secs(5));
+            colors.rotate_right(1);
+        }
+    });
 
     loop {
         let msg = match recv.recv() {

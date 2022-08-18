@@ -1,4 +1,5 @@
 mod app;
+mod color;
 mod event_bus;
 mod websocket;
 
